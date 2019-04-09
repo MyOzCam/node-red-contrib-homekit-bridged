@@ -1,3 +1,141 @@
+<!--Registering NodeRED type, 2 types of node will be registered below
+    homekit-bridge: Bridge node type
+    homekit-accessory: Accessory node type
+-->
+
+<script type="text/javascript">
+    
+    const Accessory = require("hap-nodejs").Accessory;
+
+    RED.nodes.registerType("homekit-accessory", {
+        category: "advanced",
+        paletteLabel: "homekit",
+        defaults: {
+            bridge: {
+                value: "",
+                type: "homekit-bridge",
+                required: false
+            },
+            name: {
+                value: "",
+                required: true,
+                validate: function(value) {
+                    return value.length > 0;
+                }
+            },
+            accessoryName: {
+                value: "",
+                required: true
+            },
+            topic: {
+                value:""
+            },
+            filter: {
+                value: false
+            },
+            manufacturer: {
+                value: "Default Manufacturer",
+                required: true
+            },
+            model: {
+                value: "Default Model",
+                required: true
+            },
+            serialNo: {
+                value: "Default Serial Number",
+                required: true
+            }
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "homekit.png",
+        color: "#fcc127",
+        label: function() {
+            return this.name || this.accessoryName || "Accessory";
+        },
+        labelStyle: function() {
+            return this.name ? "node_label_italic" : "";
+        },
+        oneditprepare: function() {
+            let node = this;
+            const selectAccessoryName = $("#node-input-accessoryName");
+            for (let key in Accessory.Categories) {
+                selectAccessoryName.append(
+                    $("<option></option>").val(key).text(key)
+                );
+            }
+        },
+        oneditsave: function() {
+            let node = this;
+        },
+        oneditcancel: function() {
+            this.editor.destroy();
+            delete this.editor;
+        },
+        oneditresize: function(size) {
+            const rows = $("#dialog-form>div:not(.node-text-editor-row)");
+            const height = $("#dialog-form").height();
+            for (const i = 0; i < rows.size(); i++) {
+                height -= $(rows[i]).outerHeight(true);
+            }
+            const editorRow = $("#dialog-form>div.node-text-editor-row");
+            height -=
+                parseInt(editorRow.css("marginTop")) +
+                parseInt(editorRow.css("marginBottom"));
+            $(".node-text-editor").css("height", height + "px");
+            this.editor.resize();
+        }
+    });
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType("homekit-bridge", {
+        category: "config",
+        defaults: {
+            bridgeName: {
+                value: "",
+                required: true
+            },
+            pinCode: {
+                value: "111-11-111",
+                required: true,
+                validate: RED.validators.regex(/[0-9]{3}-[0-9]{2}-[0-9]{3}/)
+            },
+            port: {
+                required: false,
+                validate: RED.validators.port
+            },
+            allowInsecureRequest: {
+                value: false,
+                required: true
+            },
+            manufacturer: {
+                value: "Default Manufacturer",
+                required: true
+            },
+            model: {
+                value: "Default Model",
+                required: true
+            },
+            serialNo: {
+                value: "Default Serial Number",
+                required: true
+            }
+        },
+        label: function() {
+            return this.bridgeName || "Bridge";
+        },
+        labelStyle: function() {
+            return this.bridgeName ? "node_label_italic" : "";
+        },
+        oneditprepare: function () {
+            //Any thing need?
+        }
+    });
+</script>
+
+
+// define node form 
 <script type="text/x-red" data-template-name="homekit-service">
     <div class="form-row">
         <label for="node-config-input-isParent"><i class="fa fa-tasks"></i> Service Hierarchy</label>
@@ -9,9 +147,7 @@
 
     <div id="isParent">
         <div class="form-row">
-            <label for="node-input-bridge">
-          <i class="fa fa-rocket"></i>
-          Bridge</label>
+            <label for="node-input-bridge"><i class="fa fa-rocket"></i>Bridge</label>
             <input id="node-input-bridge">
         </div>
     </div>
@@ -212,301 +348,3 @@
     </ul>
 </script>
 
-<script type="text/javascript">
-    let serviceTypes;
-
-    //HomeKitServiceTypes
-    $.getJSON("homekit/service/types", function(data) {
-        serviceTypes = data;
-    });
-
-    RED.nodes.registerType("homekit-service", {
-        category: "advanced",
-        paletteLabel: "homekit",
-        defaults: {
-            isParent: {
-                required: true
-            },
-            bridge: {
-                value: "",
-                type: "homekit-bridge",
-                required: false
-            },
-            parentService: {
-                value: "",
-                required: false
-            },
-            name: {
-                value: "",
-                required: true,
-                validate: function(value) {
-                    return value.length > 0;
-                }
-            },
-            serviceName: {
-                value: "",
-                required: true
-            },
-            topic: {
-                value:""
-            },
-            filter: {
-                value: false
-            },
-            manufacturer: {
-                value: "Default Manufacturer",
-                required: true
-            },
-            model: {
-                value: "Default Model",
-                required: true
-            },
-            serialNo: {
-                value: "Default Serial Number",
-                required: true
-            },
-            characteristicProperties: {
-                value: "{}",
-                validate: function(value) {
-                    if (value.length === 0) {
-                        return true;
-                    }
-
-                    try {
-                        JSON.parse(value);
-                    } catch (e) {
-                        return false;
-                    }
-
-                    return value[0] === "{";
-                }
-            }
-        },
-        inputs: 1,
-        outputs: 1,
-        icon: "homekit.png",
-        color: "#fcc127",
-        label: function() {
-            return this.name || this.serviceName || "Service";
-        },
-        labelStyle: function() {
-            return this.name ? "node_label_italic" : "";
-        },
-        oneditprepare: function() {
-            let node = this;
-            let isParentToggle = $("#node-config-input-isParent");
-
-            if (node.isParent === false) {
-                isParentToggle.val("false");
-            } else {
-                isParentToggle.val("true");
-            }
-
-            let isLinkedDiv = $("#isLinked");
-            let isParentDiv = $("#isParent");
-
-            isParentToggle.change(function(){
-                if(isParentToggle.val() === "true") {
-                    isLinkedDiv.fadeOut("fast");
-                    isParentDiv.fadeIn("fast");
-                } else {
-                    isParentDiv.fadeOut("fast");
-                    isLinkedDiv.fadeIn("fast");
-                }
-            }).change();
-
-            const selectServiceName = $("#node-input-serviceName");
-            for (let key in serviceTypes) {
-                if (!serviceTypes.hasOwnProperty(key)) continue;
-
-                selectServiceName.append(
-                    $("<option></option>")
-                        .val(key)
-                        .text(key)
-                );
-            }
-            selectServiceName
-                .find("option")
-                .filter(function() {
-                    return $(this).val() === node.serviceName;
-                })
-                .attr("selected", true);
-            selectServiceName.change();
-
-            node.editor = RED.editor.createEditor({
-                id: "node-input-characteristicProperties-editor",
-                mode: "ace/mode/json",
-                value: $("#node-input-characteristicProperties").val()
-            });
-
-            const selectParentService = $("#node-input-parentService");
-
-            const candidateNodes = RED.nodes.filterNodes({type: "homekit-service"});
-            const inSubflow = !!RED.nodes.subflow(node.z);
-            candidateNodes.forEach(function(n) {
-                if (!n.name || n.name.length < 1 || !n.isParent) {
-                    return;
-                }
-
-                if (n.id === node.id) {
-                    return;
-                }
-
-                if (inSubflow) {
-                    if (n.z !== node.z) {
-                        return;
-                    }
-                } else {
-                    if (!!RED.nodes.subflow(n.z)) {
-                        return;
-                    }
-                }
-
-                let sublabel;
-                let tab = RED.nodes.workspace(n.z);
-                if (tab) {
-                    sublabel = tab.label || tab.id;
-                } else {
-                    tab = RED.nodes.subflow(n.z);
-                    sublabel = "subflow : " + tab.name;
-                }
-
-                const value = n.id;
-                const text = n.name + " (" + sublabel + ")";
-
-                selectParentService.append(
-                    $("<option></option>")
-                        .val(value)
-                        .text(text)
-                );
-            });
-
-            selectParentService
-                .find("option")
-                .filter(function() {
-                    return $(this).val() === node.parentService;
-                })
-                .attr("selected", true);
-            selectParentService.change();
-        },
-        oneditsave: function() {
-            let node = this;
-
-            node.isParent = $("#node-config-input-isParent").val() === "true";
-
-            if (!node.isParent) {
-                node.parentService = $("node-input-parentService option:selected").val();
-            }
-
-            node.serviceName = $("node-input-serviceName option:selected").val();
-            $("#node-input-characteristicProperties").val(node.editor.getValue());
-            node.editor.destroy();
-            delete node.editor;
-        },
-        oneditcancel: function() {
-            this.editor.destroy();
-            delete this.editor;
-        },
-        oneditresize: function(size) {
-            const rows = $("#dialog-form>div:not(.node-text-editor-row)");
-            const height = $("#dialog-form").height();
-            for (const i = 0; i < rows.size(); i++) {
-                height -= $(rows[i]).outerHeight(true);
-            }
-            const editorRow = $("#dialog-form>div.node-text-editor-row");
-            height -=
-                parseInt(editorRow.css("marginTop")) +
-                parseInt(editorRow.css("marginBottom"));
-            $(".node-text-editor").css("height", height + "px");
-            this.editor.resize();
-        }
-    });
-</script>
-
-<script type="text/javascript">
-    RED.nodes.registerType("homekit-bridge", {
-        category: "config",
-        defaults: {
-            bridgeName: {
-                value: "",
-                required: true
-            },
-            pinCode: {
-                value: "111-11-111",
-                required: true,
-                validate: RED.validators.regex(/[0-9]{3}-[0-9]{2}-[0-9]{3}/)
-            },
-            port: {
-                required: false,
-                validate: RED.validators.port
-            },
-            allowInsecureRequest: {
-                value: false,
-                required: true
-            },
-            manufacturer: {
-                value: "Default Manufacturer",
-                required: true
-            },
-            model: {
-                value: "Default Model",
-                required: true
-            },
-            serialNo: {
-                value: "Default Serial Number",
-                required: true
-            },
-            customMdnsConfig: {
-                value: false,
-                required: false
-            },
-            mdnsMulticast: {
-                value: true,
-                required: false
-            },
-            mdnsInterface: {
-                value: undefined,
-                required: false
-            },
-            mdnsPort: {
-                value: undefined,
-                required: false,
-                validate: RED.validators.port
-            },
-            mdnsIp: {
-                value: undefined,
-                required: false
-            },
-            mdnsTtl: {
-                value: undefined,
-                required: false
-            },
-            mdnsLoopback: {
-                value: true,
-                required: false
-            },
-            mdnsReuseAddr: {
-                value: true,
-                required: false
-            }
-        },
-        label: function() {
-            return this.bridgeName || "Bridge";
-        },
-        labelStyle: function() {
-            return this.bridgeName ? "node_label_italic" : "";
-        },
-        oneditprepare: function () {
-            let customMdnsConfigCheckbox = $("#node-config-input-customMdnsConfig");
-            let mdnsConfiguration = $("#mdns-configuration");
-
-            customMdnsConfigCheckbox.change(function(){
-                if(this.checked) {
-                    mdnsConfiguration.fadeIn("fast");
-                } else {
-                    mdnsConfiguration.fadeOut("fast");
-                }
-            }).change();
-        }
-    });
-</script>
